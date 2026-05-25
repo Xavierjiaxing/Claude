@@ -35,7 +35,7 @@ export default function ReportOutput({ markdown, sources, isGenerating }: Report
     toast.success('下载完成');
   };
 
-  const html = markdown ? marked.parse(markdown) as string : '';
+  const html = (!isGenerating && markdown) ? marked.parse(markdown) as string : '';
 
   if (!markdown && !isGenerating) return null;
 
@@ -46,11 +46,11 @@ export default function ReportOutput({ markdown, sources, isGenerating }: Report
           <FileEdit className="h-4 w-4" /> 生成的报告
         </h3>
         <div className="flex gap-1.5">
-          <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 text-xs">
+          <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 text-xs" disabled={isGenerating}>
             {copied ? <Check className="h-3.5 w-3.5 mr-1 text-emerald-500" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
             {copied ? '已复制' : '复制'}
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleDownload} className="h-7 text-xs">
+          <Button variant="ghost" size="sm" onClick={handleDownload} className="h-7 text-xs" disabled={isGenerating}>
             <Download className="h-3.5 w-3.5 mr-1" /> 下载 MD
           </Button>
         </div>
@@ -60,6 +60,8 @@ export default function ReportOutput({ markdown, sources, isGenerating }: Report
           <div className="flex items-center gap-2 text-muted-foreground text-sm">
             <Loader2 className="h-4 w-4 animate-spin" /> 正在生成报告，请稍候...
           </div>
+        ) : isGenerating ? (
+          <pre className="text-sm whitespace-pre-wrap font-sans text-foreground leading-relaxed">{markdown}</pre>
         ) : (
           <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: html }} />
         )}
