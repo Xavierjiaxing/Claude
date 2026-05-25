@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s http://localhost:3000/api/stats)",
+      "Bash(curl -s http://localhost:3000/api/documents)",
+      "Bash(curl -s http://localhost:3000/api/report/types)"
+    ]
+  }
+}

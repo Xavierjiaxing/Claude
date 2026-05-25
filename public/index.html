@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>医疗器械 AI 知识库</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="header-content">
+        <h1>医疗器械 AI 知识库</h1>
+        <span class="header-subtitle">RAG 智能检索与报告生成系统</span>
+      </div>
+    </header>
+
+    <nav class="tab-nav" id="tabNav">
+      <button class="tab-btn active" data-tab="documents">
+        <span class="tab-icon">&#128196;</span> 文档管理
+      </button>
+      <button class="tab-btn" data-tab="qa">
+        <span class="tab-icon">&#128172;</span> 智能问答
+      </button>
+      <button class="tab-btn" data-tab="report">
+        <span class="tab-icon">&#128202;</span> 报告生成
+      </button>
+    </nav>
+
+    <main class="tab-content">
+      <!-- ======== 文档管理页签 ======== -->
+      <section class="tab-panel active" id="panel-documents">
+        <div class="upload-section">
+          <div class="upload-zone" id="uploadZone">
+            <div class="upload-zone-content">
+              <span class="upload-icon">&#128229;</span>
+              <p>拖拽文件到此处，或点击选择文件</p>
+              <p class="upload-hint">支持 PDF、DOCX、TXT、MD 及图片（JPG/PNG/BMP/WebP），单文件 ≤50MB</p>
+              <input type="file" id="fileInput" multiple accept=".pdf,.docx,.txt,.md,.jpg,.jpeg,.png,.bmp,.webp" hidden>
+              <button class="btn btn-outline" id="browseBtn">浏览文件</button>
+            </div>
+          </div>
+          <div class="upload-progress hidden" id="uploadProgress">
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <span class="progress-text" id="progressText">上传中...</span>
+          </div>
+        </div>
+
+        <div class="stats-bar" id="statsBar">
+          <div class="stat-item"><strong>文档数：</strong><span id="statsDocs">--</span></div>
+          <div class="stat-item"><strong>文本片段：</strong><span id="statsChunks">--</span></div>
+          <button class="btn btn-sm" id="refreshStatsBtn" title="刷新">&#8635;</button>
+        </div>
+
+        <div class="doc-table-container">
+          <table class="doc-table" id="docTable">
+            <thead>
+              <tr>
+                <th>文件名</th>
+                <th>类型</th>
+                <th>片段数</th>
+                <th>导入时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="docTableBody">
+              <tr class="empty-row"><td colspan="5">暂无文档，请上传文件</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ======== 智能问答页签 ======== -->
+      <section class="tab-panel" id="panel-qa">
+        <div class="qa-layout">
+          <aside class="qa-sidebar" id="qaSidebar">
+            <button class="btn btn-primary btn-full" id="newConvBtn">+ 新建对话</button>
+            <div class="conv-list" id="convList"></div>
+          </aside>
+          <div class="qa-main">
+            <div class="chat-area" id="chatArea">
+              <div class="chat-welcome">
+                <span class="welcome-icon">&#129302;</span>
+                <h3>欢迎使用医疗器械 AI 知识库</h3>
+                <p>先在"文档管理"中导入技术文档，然后在此提问</p>
+                <p class="welcome-examples">
+                  试试问：<br>
+                  "注塑工序中飞边问题如何解决？"<br>
+                  "生物相容性评价需要哪些试验项目？"<br>
+                  "CAPA-2026-005 的根本原因是什么？"
+                </p>
+              </div>
+            </div>
+            <div class="chat-input-area">
+              <textarea id="chatInput" rows="2" placeholder="输入您的问题... (Ctrl+Enter 发送)"></textarea>
+              <button class="btn btn-primary" id="sendBtn">发送</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======== 报告生成页签 ======== -->
+      <section class="tab-panel" id="panel-report">
+        <div class="report-layout">
+          <div class="report-form">
+            <div class="form-group">
+              <label>报告类型</label>
+              <select id="reportType">
+                <option value="">-- 请选择 --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>报告标题（可选）</label>
+              <input type="text" id="reportTitle" placeholder="例如：B20260312 批次滴斗歪斜 CAPA 报告">
+            </div>
+            <div class="form-group">
+              <label>关注点（可选）</label>
+              <textarea id="reportFocus" rows="3" placeholder="描述你希望报告重点分析的方向..."></textarea>
+            </div>
+            <button class="btn btn-primary btn-full" id="generateReportBtn">生成报告</button>
+          </div>
+          <div class="report-output hidden" id="reportOutput">
+            <div class="report-output-header">
+              <h3>&#128202; 生成的报告</h3>
+              <div class="report-actions">
+                <button class="btn btn-sm" id="copyReportBtn">&#128203; 复制</button>
+                <button class="btn btn-sm" id="downloadReportBtn">&#128190; 下载 MD</button>
+              </div>
+            </div>
+            <div class="report-body" id="reportBody"></div>
+            <div class="report-sources" id="reportSources"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/documents.js"></script>
+  <script src="/js/qa.js"></script>
+  <script src="/js/report.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
