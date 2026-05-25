@@ -19,13 +19,15 @@ export function createIngestRouter(pipeline: RagPipeline): Router {
       const details: { fileName: string; chunkCount: number }[] = [];
 
       for (const file of files) {
+        // Fix: multer sometimes mis-decodes UTF-8 filenames as Latin-1
+        const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
         try {
-          const result = await pipeline.ingestFile(file.path, file.originalname);
+          const result = await pipeline.ingestFile(file.path, originalName);
           totalChunks += result.chunks;
-          details.push({ fileName: file.originalname, chunkCount: result.chunks });
+          details.push({ fileName: originalName, chunkCount: result.chunks });
         } catch (err) {
-          details.push({ fileName: file.originalname, chunkCount: 0 });
-          Logger.error(`Failed to ingest ${file.originalname}:`, (err as Error).message);
+          details.push({ fileName: originalName, chunkCount: 0 });
+          Logger.error(`Failed to ingest ${originalName}:`, (err as Error).message);
         } finally {
           fs.unlink(file.path, () => {});
         }

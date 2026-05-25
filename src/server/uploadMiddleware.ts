@@ -11,7 +11,9 @@ const storage = multer.diskStorage({
   },
   filename: (_req, file, cb) => {
     const timestamp = Date.now();
-    const safeName = file.originalname.replace(/[^a-zA-Z0-9._\-一-鿿]/g, '_');
+    // Fix Latin-1 → UTF-8 mis-decoding of Chinese filenames
+    const decodedName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    const safeName = decodedName.replace(/[^a-zA-Z0-9._\-一-鿿㐀-䶿]/g, '_');
     cb(null, `${timestamp}-${safeName}`);
   },
 });
