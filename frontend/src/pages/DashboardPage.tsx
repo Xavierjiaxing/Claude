@@ -33,6 +33,8 @@ export default function DashboardPage() {
       } catch { /* ignore */ }
     };
     load();
+    const interval = setInterval(load, 12000);
+    return () => clearInterval(interval);
   }, []);
 
   return (

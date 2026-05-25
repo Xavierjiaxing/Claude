@@ -1,11 +1,29 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { api } from '@/lib/api';
+import { formatTokens } from '@/lib/utils';
+import type { TokenStats } from '@/lib/types';
 import { LogOut } from 'lucide-react';
 
 export default function Header() {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const [tokenDisplay, setTokenDisplay] = useState('--');
+
+  useEffect(() => {
+    const refresh = async () => {
+      try {
+        const data = await api.get<TokenStats>('/api/stats/tokens');
+        const total = (data.inputTokens || 0) + (data.outputTokens || 0);
+        setTokenDisplay(formatTokens(total));
+      } catch { /* ignore */ }
+    };
+    refresh();
+    const interval = setInterval(refresh, 8000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <header className="relative h-14 bg-gradient-to-r from-[#022b71] via-[#0f2b6d] to-[#5b21b6] flex items-center justify-between px-6 text-white shrink-0 z-50 overflow-hidden">
@@ -30,7 +48,7 @@ export default function Header() {
       <div className="flex items-center gap-3 relative">
         <button onClick={() => navigate('/stats')}
           className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 transition-colors rounded-full px-3 py-1 text-xs cursor-pointer border border-white/10">
-          <span className="font-bold tabular-nums" id="headerTokenVal">--</span>
+          <span className="font-bold tabular-nums">{tokenDisplay}</span>
           <span className="opacity-60 text-[10px] uppercase tracking-wider">Tokens</span>
         </button>
         <Button variant="ghost" size="icon" onClick={logout} className="rounded-full hover:bg-white/15 text-white h-8 w-8" title="退出登录">
