@@ -3,6 +3,7 @@ import path from 'path';
 import mammoth from 'mammoth';
 import { Document, RAG_CONFIG } from './config';
 import { ClaudeClient } from '../claude/client';
+import { describeImage as describeImageKimi } from '../claude/imageClient';
 
 export class DocumentLoader {
   private claudeClient: ClaudeClient | null;
@@ -11,7 +12,7 @@ export class DocumentLoader {
     this.claudeClient = claudeClient || null;
   }
 
-  async loadFile(filePath: string): Promise<Document> {
+  async loadFile(filePath: string, displayName?: string): Promise<Document> {
     const ext = path.extname(filePath).toLowerCase();
     const absolutePath = path.resolve(filePath);
 
@@ -30,6 +31,7 @@ export class DocumentLoader {
         break;
       case '.txt':
       case '.md':
+      case '.svg':
         content = fs.readFileSync(absolutePath, 'utf-8');
         break;
       case '.jpg':
@@ -47,7 +49,7 @@ export class DocumentLoader {
       filePath: absolutePath,
       content: content.trim(),
       metadata: {
-        fileName: path.basename(filePath),
+        fileName: displayName || path.basename(filePath),
         fileType: ext,
         ingestedAt: new Date().toISOString(),
       },
@@ -115,13 +117,14 @@ export class DocumentLoader {
     const uploadedAt = stats.mtime.toISOString().replace('T', ' ').slice(0, 19);
     const fileSizeKB = Math.round(stats.size / 1024);
 
-    if (this.claudeClient) {
-      try {
-        const description = await this.claudeClient.describeImage(filePath);
+    // Try Kimi K2.6 vision first, fall back to metadata-only description
+    try {
+      const description = await describeImageKimi(filePath);
+      if (description) {
         return `[图片文件] 文件名: ${fileName}\n格式: ${ext}\n文件大小: ${fileSizeMB}MB\n\n视觉内容描述：\n${description}`;
-      } catch (_err) {
-        // Vision API not available — generate a metadata-based description
       }
+    } catch (err) {
+      console.error('[loadImage] Kimi vision failed:', (err as Error).message);
     }
 
     const keywords = fileName

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import fs from 'fs';
 import { RagPipeline } from '../../rag/ragPipeline';
 import { upload } from '../uploadMiddleware';
 import { Logger } from '../../utils/logger';
@@ -19,12 +20,14 @@ export function createIngestRouter(pipeline: RagPipeline): Router {
 
       for (const file of files) {
         try {
-          const result = await pipeline.ingestFile(file.path);
+          const result = await pipeline.ingestFile(file.path, file.originalname);
           totalChunks += result.chunks;
           details.push({ fileName: file.originalname, chunkCount: result.chunks });
         } catch (err) {
           details.push({ fileName: file.originalname, chunkCount: 0 });
           Logger.error(`Failed to ingest ${file.originalname}:`, (err as Error).message);
+        } finally {
+          fs.unlink(file.path, () => {});
         }
       }
 

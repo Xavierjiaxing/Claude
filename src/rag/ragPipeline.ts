@@ -8,6 +8,7 @@ import { VectorStore } from './vectorStore';
 import { Retriever } from './retriever';
 import { buildContextPrompt, buildUserPrompt, MEDICAL_SYSTEM_PROMPT } from '../cli/prompts';
 import { Logger } from '../utils/logger';
+import { recordTokens } from '../server/tokenTracker';
 
 export class RagPipeline {
   private docLoader: DocumentLoader;
@@ -16,6 +17,7 @@ export class RagPipeline {
   vectorStore: VectorStore;
   private retriever: Retriever;
   private claudeClient: ClaudeClient;
+  private initialized = false;
 
   constructor() {
     this.claudeClient = new ClaudeClient();
@@ -26,12 +28,25 @@ export class RagPipeline {
     this.retriever = new Retriever(this.embedService, this.vectorStore);
   }
 
-  async initialize(): Promise<void> {
-    await this.embedService.initialize();
+  async initialize(progress_callback?: (info: any) => void): Promise<void> {
+    if (this.initialized) return;
+    await this.embedService.initialize(progress_callback);
     await this.vectorStore.initialize();
+    this.initialized = true;
+  }
+
+  isInitialized(): boolean {
+    return this.initialized;
+  }
+
+  private async ensureInitialized(): Promise<void> {
+    if (!this.initialized) {
+      await this.initialize();
+    }
   }
 
   async ingestPath(inputPath: string): Promise<{ files: number; chunks: number }> {
+    await this.ensureInitialized();
     const absolutePath = fs.existsSync(inputPath) ? require('fs').realpathSync(inputPath) : inputPath;
     const isDir = fs.existsSync(absolutePath) && fs.statSync(absolutePath).isDirectory();
 
@@ -61,8 +76,9 @@ export class RagPipeline {
     }
   }
 
-  async ingestFile(filePath: string): Promise<{ files: number; chunks: number }> {
-    const doc = await this.docLoader.loadFile(filePath);
+  async ingestFile(filePath: string, originalName?: string): Promise<{ files: number; chunks: number }> {
+    await this.ensureInitialized();
+    const doc = await this.docLoader.loadFile(filePath, originalName);
     await this.vectorStore.deleteBySource(doc.filePath);
     const chunks = this.textSplitter.split(doc);
     if (chunks.length === 0) {
@@ -78,6 +94,7 @@ export class RagPipeline {
   }
 
   async ask(question: string): Promise<string> {
+    await this.ensureInitialized();
     const searchResults = await this.retriever.retrieve(question);
 
     if (searchResults.length === 0) {
@@ -114,10 +131,12 @@ export class RagPipeline {
   }
 
   async getStats(): Promise<{ totalChunks: number }> {
+    await this.ensureInitialized();
     return this.vectorStore.stats();
   }
 
   async listDocuments(): Promise<{ fileName: string; filePath: string; fileType: string; chunkCount: number; ingestedAt: string }[]> {
+    await this.ensureInitialized();
     const docs = await this.vectorStore.listDocuments();
     const result = [];
     for (const doc of docs) {
@@ -134,6 +153,7 @@ export class RagPipeline {
   }
 
   async deleteDocument(sourceFile: string): Promise<void> {
+    await this.ensureInitialized();
     await this.vectorStore.deleteDocument(sourceFile);
     // Also delete the physical uploaded file if it exists under uploads/
     try {
@@ -150,18 +170,26 @@ export class RagPipeline {
     question: string,
     onChunk: (chunk: string) => void,
     conversationHistory?: { role: string; content: string }[]
-  ): Promise<{ answer: string; sources: string[] }> {
+  ): Promise<{ answer: string; sources: string[]; chunks: { text: string; sourceFile: string; score: number }[] }> {
+    await this.ensureInitialized();
     const searchResults = await this.retriever.retrieve(question);
 
     if (searchResults.length === 0) {
       const msg = '根据现有知识库中的文档，未找到与您问题相关的信息。\n\n建议：\n1. 确认相关文档是否已导入知识库\n2. 尝试使用不同的关键词提问';
       onChunk(msg);
-      return { answer: msg, sources: [] };
+      return { answer: msg, sources: [], chunks: [] };
     }
 
     const contexts = searchResults.map((r) => ({
       text: r.chunk.text,
       sourceFile: r.chunk.sourceFile.replace(/\\/g, '/').split('/').pop() || r.chunk.sourceFile,
+    }));
+
+    // Build chunk details for frontend visualization
+    const chunkDetails = searchResults.map((r) => ({
+      text: r.chunk.text.length > 300 ? r.chunk.text.slice(0, 300) + '...' : r.chunk.text,
+      sourceFile: r.chunk.sourceFile.replace(/\\/g, '/').split('/').pop() || r.chunk.sourceFile,
+      score: Math.round(r.score * 100) / 100,
     }));
 
     const contextText = buildContextPrompt(contexts);
@@ -194,19 +222,24 @@ export class RagPipeline {
     let answer = '';
     const stream = await this.claudeClient.streamMessage(messages, 'claude-sonnet-4-6', 2048, 0.3);
 
-    for await (const chunk of stream) {
-      if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-        const text = chunk.delta.text || '';
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+        const text = event.delta.text || '';
         answer += text;
         onChunk(text);
+      }
+      if (event.type === 'message_stop' && (event as any).message?.usage) {
+        const usage = (event as any).message.usage;
+        recordTokens(usage.input_tokens, usage.output_tokens);
       }
     }
 
     const sources = [...new Set(contexts.map((c) => c.sourceFile))];
-    return { answer, sources };
+    return { answer, sources, chunks: chunkDetails };
   }
 
   async clearKnowledgeBase(): Promise<void> {
+    await this.ensureInitialized();
     await this.vectorStore.clear();
   }
 }
