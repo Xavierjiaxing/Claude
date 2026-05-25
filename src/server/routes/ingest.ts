@@ -4,6 +4,19 @@ import { RagPipeline } from '../../rag/ragPipeline';
 import { upload } from '../uploadMiddleware';
 import { Logger } from '../../utils/logger';
 
+// Detect and fix UTF-8 filenames mis-decoded as Latin-1 by multer/busboy
+// When a filename is already correct, this returns it unchanged
+function fixEncoding(name: string): string {
+  if (!/[\x80-\xFF]/.test(name)) return name; // Pure ASCII
+  // Try Latin-1 → UTF-8 re-encoding
+  const fixed = Buffer.from(name, 'latin1').toString('utf8');
+  // If the "fixed" version has replacement chars (�), keep original
+  if (fixed.includes('�')) return name;
+  // If fixed has more printable Chinese-range chars, use it
+  const countCJK = (s: string) => (s.match(/[一-鿿]/g) || []).length;
+  return countCJK(fixed) >= countCJK(name) ? fixed : name;
+}
+
 export function createIngestRouter(pipeline: RagPipeline): Router {
   const router = Router();
 
@@ -19,8 +32,8 @@ export function createIngestRouter(pipeline: RagPipeline): Router {
       const details: { fileName: string; chunkCount: number }[] = [];
 
       for (const file of files) {
-        // Fix: multer sometimes mis-decodes UTF-8 filenames as Latin-1
-        const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+        // Detect and fix Latin-1 misinterpreted UTF-8 filenames
+        const originalName = fixEncoding(file.originalname);
         try {
           const result = await pipeline.ingestFile(file.path, originalName);
           totalChunks += result.chunks;
