@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { api } from '@/lib/api';
 import ReportForm from '@/components/report/ReportForm';
 import ReportOutput from '@/components/report/ReportOutput';
@@ -21,12 +22,18 @@ export default function ReportPage() {
     abortRef.current = controller;
 
     let rawText = '';
+    let firstChunk = true;
     api.stream(
       '/api/report',
       { type, title, focus, stream: true },
       (text) => {
         rawText += text;
-        setMarkdown(rawText);
+        if (firstChunk) {
+          firstChunk = false;
+          flushSync(() => setMarkdown(rawText));
+        } else {
+          setMarkdown(rawText);
+        }
       },
       (s) => {
         setSources(s || []);

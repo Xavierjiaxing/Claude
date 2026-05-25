@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import { api } from '@/lib/api';
 import type { Conversation, Message } from '@/lib/types';
 import ConvList from '@/components/qa/ConvList';
@@ -71,6 +72,7 @@ export default function QAPage() {
     setIsStreaming(true);
 
     let rawText = '';
+    let firstChunk = true;
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -79,7 +81,12 @@ export default function QAPage() {
       { question, conversationId: activeConvId, stream: true },
       (chunk) => {
         rawText += chunk;
-        setStreamingText(rawText);
+        if (firstChunk) {
+          firstChunk = false;
+          flushSync(() => setStreamingText(rawText));
+        } else {
+          setStreamingText(rawText);
+        }
       },
       (sources, chunks, convId) => {
         setActiveConvId(convId);
