@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import { recordTokens } from '../server/tokenTracker';
 
 dotenv.config();
 
@@ -20,14 +21,19 @@ export class ClaudeClient {
     messages: Anthropic.MessageParam[],
     model: string = 'claude-3-sonnet-20240229',
     maxTokens: number = 1024,
-    temperature: number = 0.7
+    temperature: number = 0.7,
+    system?: string
   ): Promise<Anthropic.Message> {
     const response = await this.client.messages.create({
       model,
       max_tokens: maxTokens,
       temperature,
+      system,
       messages,
     });
+    if (response.usage) {
+      recordTokens(response.usage.input_tokens, response.usage.output_tokens);
+    }
     return response;
   }
 
@@ -107,12 +113,14 @@ export class ClaudeClient {
     messages: Anthropic.MessageParam[],
     model: string = 'claude-3-sonnet-20240229',
     maxTokens: number = 1024,
-    temperature: number = 0.7
+    temperature: number = 0.7,
+    system?: string
   ) {
     return this.client.messages.create({
       model,
       max_tokens: maxTokens,
       temperature,
+      system,
       messages,
       stream: true,
     });

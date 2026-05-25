@@ -142,4 +142,29 @@ export class VectorStore {
   async deleteDocument(sourceFile: string): Promise<void> {
     await this.deleteBySource(sourceFile);
   }
+
+  async getChunksBySource(sourceFiles: string[]): Promise<{ sourceFile: string; text: string }[]> {
+    if (!this.initialized) await this.initialize();
+    if (!this.table || sourceFiles.length === 0) return [];
+
+    const result: { sourceFile: string; text: string }[] = [];
+    for (const sf of sourceFiles) {
+      try {
+        const rows = await this.table
+          .query()
+          .filter(`sourceFile = '${escapeSql(sf)}'`)
+          .toArray();
+        const text = rows
+          .sort((a: any, b: any) => a.chunkIndex - b.chunkIndex)
+          .map((r: any) => r.text)
+          .join('\n\n');
+        if (text) {
+          result.push({ sourceFile: sf, text });
+        }
+      } catch {
+        // skip files that can't be queried
+      }
+    }
+    return result;
+  }
 }

@@ -1,28 +1,45 @@
 let currentConvId = null;
 let isStreaming = false;
+let streamAbortController = null;
 
 function initQATab() {
-  const newBtn = document.getElementById('newConvBtn');
-  const sendBtn = document.getElementById('sendBtn');
-  const chatInput = document.getElementById('chatInput');
+  var newBtn = document.getElementById('newConvBtn');
+  var sendBtn = document.getElementById('sendBtn');
+  var stopBtn = document.getElementById('stopBtn');
+  var chatInput = document.getElementById('chatInput');
+  var searchInput = document.getElementById('convSearchInput');
+  var toReportBtn = document.getElementById('qaToReportBtn');
 
-  if (newBtn) newBtn.addEventListener('click', () => {
+  if (newBtn) newBtn.addEventListener('click', function () {
     currentConvId = null;
-    const chatArea = document.getElementById('chatArea');
-    chatArea.innerHTML = `<div class="chat-welcome">
-      <span class="welcome-icon">&#129302;</span>
-      <h3>新对话已开始</h3>
-      <p>在下方输入您的问题</p>
-    </div>`;
+    document.getElementById('chatArea').innerHTML = '<div class="chat-welcome"><span class="welcome-icon">&#129302;</span><h3>新对话已开始</h3><p>在下方输入您的问题</p></div>';
+    document.getElementById('convSearchInput').value = '';
     refreshConvList();
   });
 
   if (sendBtn) sendBtn.addEventListener('click', sendMessage);
+  if (stopBtn) stopBtn.addEventListener('click', stopStreaming);
   if (chatInput) {
-    chatInput.addEventListener('keydown', (e) => {
+    chatInput.addEventListener('keydown', function (e) {
       if (e.ctrlKey && e.key === 'Enter') {
         e.preventDefault();
         sendMessage();
+      }
+    });
+  }
+
+  // Conversation search
+  if (searchInput) {
+    searchInput.addEventListener('input', function () {
+      refreshConvList();
+    });
+  }
+
+  // "Generate report" button from current conversation
+  if (toReportBtn) {
+    toReportBtn.addEventListener('click', function () {
+      if (currentConvId && typeof navigateTo === 'function') {
+        navigateTo('report');
       }
     });
   }
@@ -35,9 +52,13 @@ async function sendMessage() {
   if (!question) return;
 
   const chatArea = document.getElementById('chatArea');
+  const sendBtn = document.getElementById('sendBtn');
+  const stopBtn = document.getElementById('stopBtn');
   chatInput.value = '';
   chatInput.disabled = true;
   isStreaming = true;
+  sendBtn.classList.add('hidden');
+  stopBtn.classList.remove('hidden');
 
   const welcome = chatArea.querySelector('.chat-welcome');
   if (welcome) welcome.remove();
@@ -46,22 +67,28 @@ async function sendMessage() {
   const assistantBubble = addAssistantBubble(chatArea);
   const bubbleContent = assistantBubble.querySelector('.bubble-content');
 
+  let rawText = '';
+
+  streamAbortController = new AbortController();
+
   API.stream(
     '/api/ask',
     { question, conversationId: currentConvId, stream: true },
     (chunk) => {
-      bubbleContent.textContent += chunk;
-      bubbleContent.innerHTML = marked.parse(bubbleContent.textContent);
+      rawText += chunk;
+      bubbleContent.textContent = rawText;
       chatArea.scrollTop = chatArea.scrollHeight;
     },
-    (sources, convId) => {
+    (sources, chunks, convId) => {
       currentConvId = convId;
-      bubbleContent.innerHTML = marked.parse(bubbleContent.textContent);
+      bubbleContent.innerHTML = marked.parse(rawText);
 
       const loadingIndicator = assistantBubble.querySelector('.chat-loading');
       if (loadingIndicator) loadingIndicator.remove();
 
-      if (sources.length > 0) {
+      if (chunks && chunks.length > 0) {
+        assistantBubble.appendChild(buildChunkCards(chunks));
+      } else if (sources.length > 0) {
         const sourcesDiv = document.createElement('div');
         sourcesDiv.className = 'chat-sources';
         const fileList = sources.map((s) => `<span>&#128196; ${escHTML(s)}</span>`).join(' &nbsp;');
@@ -72,19 +99,36 @@ async function sendMessage() {
         assistantBubble.appendChild(sourcesDiv);
       }
 
-      isStreaming = false;
-      chatInput.disabled = false;
-      chatInput.focus();
-      chatArea.scrollTop = chatArea.scrollHeight;
-      refreshConvList();
+      finishStream();
     },
     (errMsg) => {
       bubbleContent.textContent = '抱歉，请求失败: ' + errMsg;
-      isStreaming = false;
-      chatInput.disabled = false;
-      chatInput.focus();
-    }
+      finishStream();
+    },
+    streamAbortController.signal
   );
+}
+
+function stopStreaming() {
+  if (streamAbortController) {
+    streamAbortController.abort();
+    streamAbortController = null;
+  }
+  finishStream();
+}
+
+function finishStream() {
+  isStreaming = false;
+  streamAbortController = null;
+  const chatInput = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  if (chatInput) chatInput.disabled = false;
+  if (chatInput) chatInput.focus();
+  if (sendBtn) sendBtn.classList.remove('hidden');
+  if (stopBtn) stopBtn.classList.add('hidden');
+  refreshConvList();
+  if (typeof refreshTokenDisplay === 'function') refreshTokenDisplay();
 }
 
 function addUserBubble(chatArea, text) {
@@ -108,29 +152,48 @@ function addAssistantBubble(chatArea) {
 }
 
 function toggleSources(btn) {
-  const list = btn.nextElementSibling;
+  // Try direct sibling first (for chat sources), then parent's sibling (for chunk cards)
+  let list = btn.nextElementSibling;
+  if (!list && btn.parentElement) {
+    list = btn.parentElement.nextElementSibling;
+  }
   if (list) list.classList.toggle('open');
 }
 
 async function refreshConvList() {
   try {
-    const data = await API.get('/api/ask/conversations');
-    const list = document.getElementById('convList');
-    const convs = data.conversations || [];
+    var data = await API.get('/api/ask/conversations');
+    var list = document.getElementById('convList');
+    var convs = data.conversations || [];
+
+    // Search filter
+    var query = document.getElementById('convSearchInput');
+    if (query && query.value.trim()) {
+      var q = query.value.trim().toLowerCase();
+      convs = convs.filter(function (c) {
+        return (c.title || '').toLowerCase().indexOf(q) !== -1;
+      });
+    }
+
+    // Show/hide "generate report" button
+    var toReportBtn = document.getElementById('qaToReportBtn');
+    if (toReportBtn) {
+      toReportBtn.classList.toggle('hidden', !currentConvId || isStreaming);
+    }
 
     if (convs.length === 0) {
-      list.innerHTML = '<div style="padding:20px;text-align:center;color:#9aa0a6;font-size:13px;">暂无对话</div>';
+      list.innerHTML = '<div style="padding:20px;text-align:center;color:#9aa0a6;font-size:13px;">' + (query && query.value.trim() ? '未找到匹配的对话' : '暂无对话') + '</div>';
       return;
     }
 
     list.innerHTML = convs
-      .map((c) => {
-        const activeClass = c.id === currentConvId ? ' active' : '';
-        const title = escHTML(c.title || '新对话');
-        return `<div class="conv-item${activeClass}" data-conv-id="${c.id}">
-          <span class="conv-item-title" onclick="selectConversation('${c.id}')">${title}</span>
-          <span class="conv-item-delete" onclick="deleteConversation(event, '${c.id}')">&times;</span>
-        </div>`;
+      .map(function (c) {
+        var activeClass = c.id === currentConvId ? ' active' : '';
+        var title = escHTML(c.title || '新对话');
+        return '<div class="conv-item' + activeClass + '" data-conv-id="' + c.id + '">' +
+          '<span class="conv-item-title" onclick="selectConversation(\'' + c.id + '\')">' + title + '</span>' +
+          '<span class="conv-item-delete" onclick="deleteConversation(event, \'' + c.id + '\')">&times;</span>' +
+          '</div>';
       })
       .join('');
   } catch (err) {
@@ -155,13 +218,16 @@ async function selectConversation(id) {
         <div class="chat-message-label">${msg.role === 'user' ? '您' : 'AI 助手'}</div>
         <div class="chat-bubble">${marked.parse(msg.content)}</div>
       `;
-      if (msg.sources && msg.sources.length > 0) {
+      if (msg.chunks && msg.chunks.length > 0) {
+        div.appendChild(buildChunkCards(msg.chunks));
+      } else if (msg.sources && msg.sources.length > 0) {
         const fileList = msg.sources.map((s) => `<span>&#128196; ${escHTML(s)}</span>`).join(' &nbsp;');
-        div.innerHTML += `
-          <div class="chat-sources">
-            <button class="chat-sources-toggle" onclick="toggleSources(this)">&#128712; 参考文档 (${msg.sources.length})</button>
-            <div class="chat-sources-list">${fileList}</div>
-          </div>`;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'chat-sources';
+        wrapper.innerHTML = `
+          <button class="chat-sources-toggle" onclick="toggleSources(this)">&#128712; 参考文档 (${msg.sources.length})</button>
+          <div class="chat-sources-list">${fileList}</div>`;
+        div.appendChild(wrapper);
       }
       chatArea.appendChild(div);
     });
@@ -193,13 +259,39 @@ async function deleteConversation(event, id) {
   }
 }
 
-function escHTML(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+function buildChunkCards(chunks) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'chunk-cards';
+
+  const header = document.createElement('div');
+  header.className = 'chunk-cards-header';
+  header.innerHTML = `<button class="chat-sources-toggle" onclick="toggleSources(this)">&#128269; 检索到的文档片段 (${chunks.length})</button>`;
+  wrapper.appendChild(header);
+
+  const list = document.createElement('div');
+  list.className = 'chunk-cards-list';
+
+  chunks.forEach((c, i) => {
+    const barClass = c.score >= 0.7 ? 'high' : c.score >= 0.4 ? 'mid' : 'low';
+    const card = document.createElement('div');
+    card.className = 'chunk-card';
+    card.innerHTML = `
+      <div class="chunk-card-header">
+        <span class="chunk-card-index">#${i + 1}</span>
+        <span class="chunk-card-file">&#128196; ${escHTML(c.sourceFile)}</span>
+        <span class="chunk-card-score ${barClass}">相关度 ${Math.round(c.score * 100)}%</span>
+      </div>
+      <div class="chunk-card-text">${escHTML(c.text)}</div>
+    `;
+    list.appendChild(card);
+  });
+
+  wrapper.appendChild(list);
+  return wrapper;
 }
 
 window.selectConversation = selectConversation;
 window.deleteConversation = deleteConversation;
 window.toggleSources = toggleSources;
 window.refreshConvList = refreshConvList;
+window.buildChunkCards = buildChunkCards;

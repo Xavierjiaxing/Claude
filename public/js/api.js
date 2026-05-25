@@ -1,8 +1,27 @@
+function escHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function authHeaders() {
+  const token = sessionStorage.getItem('auth_token');
+  return token ? { 'Authorization': 'Bearer ' + token } : {};
+}
+
+function handleAuthError(status) {
+  if (status === 401) {
+    sessionStorage.removeItem('auth_token');
+    window.location.href = '/';
+  }
+}
+
 const API = {
   base: window.location.origin,
 
   async get(path) {
-    const res = await fetch(this.base + path);
+    const res = await fetch(this.base + path, { headers: authHeaders() });
+    if (res.status === 401) { handleAuthError(401); throw new Error('未授权'); }
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.error || `HTTP ${res.status}`);
@@ -13,9 +32,10 @@ const API = {
   async post(path, body) {
     const res = await fetch(this.base + path, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(body),
     });
+    if (res.status === 401) { handleAuthError(401); throw new Error('未授权'); }
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || `HTTP ${res.status}`);
@@ -26,9 +46,10 @@ const API = {
   async del(path, body) {
     const res = await fetch(this.base + path, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(body || {}),
     });
+    if (res.status === 401) { handleAuthError(401); throw new Error('未授权'); }
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || `HTTP ${res.status}`);
@@ -41,6 +62,11 @@ const API = {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', this.base + path);
 
+      const token = sessionStorage.getItem('auth_token');
+      if (token) {
+        xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+      }
+
       xhr.upload.addEventListener('progress', (e) => {
         if (e.lengthComputable && onProgress) {
           onProgress(Math.round((e.loaded / e.total) * 100));
@@ -48,6 +74,11 @@ const API = {
       });
 
       xhr.addEventListener('load', () => {
+        if (xhr.status === 401) {
+          handleAuthError(401);
+          reject(new Error('未授权'));
+          return;
+        }
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve(JSON.parse(xhr.responseText));
         } else {
@@ -61,12 +92,13 @@ const API = {
     });
   },
 
-  async stream(path, body, onChunk, onDone, onError) {
+  async stream(path, body, onChunk, onDone, onError, signal) {
     try {
       const res = await fetch(this.base + path, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal,
       });
 
       if (!res.ok) {
@@ -93,7 +125,7 @@ const API = {
               if (data.type === 'chunk') {
                 onChunk(data.text);
               } else if (data.type === 'done') {
-                onDone(data.sources || [], data.conversationId);
+                onDone(data.sources || [], data.chunks || [], data.conversationId);
               } else if (data.type === 'error') {
                 throw new Error(data.message);
               }
@@ -109,7 +141,7 @@ const API = {
         try {
           const data = JSON.parse(buffer.slice(6));
           if (data.type === 'done') {
-            onDone(data.sources || [], data.conversationId);
+            onDone(data.sources || [], data.chunks || [], data.conversationId);
           }
         } catch (e) {}
       }

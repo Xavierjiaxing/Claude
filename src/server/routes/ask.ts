@@ -37,6 +37,7 @@ export function createAskRouter(pipeline: RagPipeline): Router {
 
         let fullAnswer = '';
         let sources: string[] = [];
+        let chunks: { text: string; sourceFile: string; score: number }[] = [];
 
         try {
           const result = await pipeline.askStream(
@@ -48,6 +49,7 @@ export function createAskRouter(pipeline: RagPipeline): Router {
             history
           );
           sources = result.sources;
+          chunks = result.chunks;
           fullAnswer = result.answer;
         } catch (err) {
           res.write(`data: ${JSON.stringify({ type: 'error', message: (err as Error).message })}\n\n`);
@@ -56,17 +58,17 @@ export function createAskRouter(pipeline: RagPipeline): Router {
         }
 
         addMessage(convId, 'user', question);
-        addMessage(convId, 'assistant', fullAnswer, sources);
+        addMessage(convId, 'assistant', fullAnswer, sources, chunks);
 
-        res.write(`data: ${JSON.stringify({ type: 'done', sources, conversationId: convId })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: 'done', sources, chunks, conversationId: convId })}\n\n`);
         res.end();
       } else {
         addMessage(convId, 'user', question);
 
         const result = await pipeline.askStream(question, () => {}, history);
-        addMessage(convId, 'assistant', result.answer, result.sources);
+        addMessage(convId, 'assistant', result.answer, result.sources, result.chunks);
 
-        res.json({ answer: result.answer, sources: result.sources, conversationId: convId });
+        res.json({ answer: result.answer, sources: result.sources, chunks: result.chunks, conversationId: convId });
       }
     } catch (err) {
       if (!res.headersSent) {

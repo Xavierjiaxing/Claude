@@ -18,7 +18,7 @@ const storage = multer.diskStorage({
 
 function fileFilter(_req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) {
   const ext = path.extname(file.originalname).toLowerCase();
-  const allowedExts = ['.pdf', '.docx', '.txt', '.md', '.jpg', '.jpeg', '.png', '.bmp', '.webp'];
+  const allowedExts = ['.pdf', '.docx', '.txt', '.md', '.svg', '.jpg', '.jpeg', '.png', '.bmp', '.webp'];
   if (allowedExts.includes(ext)) {
     cb(null, true);
   } else {

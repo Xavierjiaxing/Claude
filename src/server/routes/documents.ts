@@ -4,10 +4,28 @@ import { RagPipeline } from '../../rag/ragPipeline';
 export function createDocumentsRouter(pipeline: RagPipeline): Router {
   const router = Router();
 
-  router.get('/', async (_req, res) => {
+  router.get('/', async (req, res) => {
     try {
-      const docs = await pipeline.listDocuments();
-      res.json({ documents: docs });
+      const allDocs = await pipeline.listDocuments();
+
+      const search = (req.query.search as string || '').toLowerCase().trim();
+      let filtered = allDocs;
+      if (search) {
+        filtered = allDocs.filter((doc: any) =>
+          (doc.fileName || '').toLowerCase().includes(search) ||
+          (doc.filePath || '').toLowerCase().includes(search) ||
+          (doc.fileType || '').toLowerCase().includes(search)
+        );
+      }
+
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize as string) || 20));
+      const total = filtered.length;
+      const totalPages = Math.ceil(total / pageSize);
+      const start = (page - 1) * pageSize;
+      const documents = filtered.slice(start, start + pageSize);
+
+      res.json({ documents, total, page, pageSize, totalPages });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
     }

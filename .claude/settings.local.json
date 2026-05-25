@@ -3,7 +3,23 @@
     "allow": [
       "Bash(curl -s http://localhost:3000/api/stats)",
       "Bash(curl -s http://localhost:3000/api/documents)",
-      "Bash(curl -s http://localhost:3000/api/report/types)"
+      "Bash(curl -s http://localhost:3000/api/report/types)",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(rm -rf D:/052001/kb-data)",
+      "Bash(npx ts-node *)",
+      "Read(//tmp/**)",
+      "Bash(curl -s http://localhost:3000/api/health)",
+      "Bash(echo \"医疗器械注塑工艺中常见的飞边问题与解决方案——飞边通常发生在模具分型面处，因注射压力过高或锁模力不足导致熔体溢出。处理方法包括降低注射速度、优化保压曲线、提高锁模力至理论值的1.2倍。关键参数：注射压力不超过120MPa，保压时间建议8-12秒，模具温度控制在80±5°C。\")",
+      "Bash(curl -s -F \"files=@/tmp/cn_test.txt\" http://localhost:3000/api/ingest)",
+      "Bash(echo \"The biocompatibility evaluation of medical device materials shall be conducted according to ISO 10993-1:2018. Key endpoints include cytotoxicity \\(ISO 10993-5\\), sensitization \\(ISO 10993-10\\), and systemic toxicity \\(ISO 10993-11\\). For surface-contacting devices with limited contact duration \\(<24h\\), a minimum of three endpoints are required: cytotoxicity, sensitization, and irritation.\")",
+      "Bash(curl -s -F \"files=@/tmp/en_test.txt\" http://localhost:3000/api/ingest)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s -X POST http://localhost:3000/api/report -H 'Content-Type: application/json' -d '{\"type\":\"technical-summary\",\"title\":\"注塑工艺\",\"stream\":true}')",
+      "Bash(curl -s -X POST http://localhost:3000/api/report -H 'Content-Type: application/json' -d '{\"type\":\"technical-summary\",\"title\":\"注塑工艺\"}')",
+      "Bash(curl -s http://localhost:3000/js/report.js)",
+      "Bash(curl -s http://localhost:3000/js/api.js)",
+      "Bash(curl -s -X POST http://localhost:3000/api/ask -H 'Content-Type: application/json' -d '{\"question\":\"注塑飞边怎么处理\",\"stream\":false}')",
+      "Bash(python3 -c ' *)"
     ]
   }
 }

@@ -8,134 +8,415 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
-  <div class="app-container">
+
+  <!-- ===== Init Overlay ===== -->
+  <div class="init-overlay" id="initOverlay">
+    <div class="init-card">
+      <svg class="init-spinner" viewBox="0 0 48 48" width="48" height="48">
+        <circle cx="24" cy="24" r="20" fill="none" stroke="var(--border-solid)" stroke-width="3"/>
+        <circle cx="24" cy="24" r="20" fill="none" stroke="var(--accent)" stroke-width="3" stroke-dasharray="94" stroke-dashoffset="62" stroke-linecap="round"/>
+      </svg>
+      <h2>正在初始化知识库</h2>
+      <p class="init-subtitle">正在下载 AI 模型文件，首次运行约需 2-5 分钟...</p>
+      <div class="init-progress-bar">
+        <div class="init-progress-fill" id="initProgressFill"></div>
+      </div>
+      <p class="init-status" id="initStatus">准备中...</p>
+      <p class="init-detail" id="initDetail"></p>
+    </div>
+  </div>
+
+  <!-- ===== App Layout ===== -->
+  <div class="app-layout">
     <header class="app-header">
-      <div class="header-content">
-        <h1>医疗器械 AI 知识库</h1>
-        <span class="header-subtitle">RAG 智能检索与报告生成系统</span>
+      <div class="header-brand">
+        <svg class="header-logo" viewBox="0 0 32 32" width="32" height="32">
+          <rect x="4" y="8" width="24" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="2"/>
+          <line x1="16" y1="8" x2="16" y2="24" stroke="currentColor" stroke-width="2"/>
+          <line x1="10" y1="14" x2="22" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="10" y1="18" x2="22" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="24" cy="10" r="4" fill="currentColor" opacity="0.3"/>
+        </svg>
+        <div class="header-content">
+          <h1>医疗器械 AI 知识库</h1>
+          <span class="header-subtitle">RAG 智能检索与报告生成系统</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="header-tokens" id="headerTokens" title="跳转到使用统计">
+          <span class="header-token-val" id="headerTokenVal">--</span>
+          <span class="header-token-label">Tokens</span>
+        </div>
+        <button class="logout-btn" id="logoutBtn" title="退出登录">
+          <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M7 17H4a2 2 0 01-2-2V5a2 2 0 012-2h3"/>
+            <polyline points="11 14 16 10 11 6"/>
+            <line x1="16" y1="10" x2="7" y2="10"/>
+          </svg>
+        </button>
       </div>
     </header>
 
-    <nav class="tab-nav" id="tabNav">
-      <button class="tab-btn active" data-tab="documents">
-        <span class="tab-icon">&#128196;</span> 文档管理
-      </button>
-      <button class="tab-btn" data-tab="qa">
-        <span class="tab-icon">&#128172;</span> 智能问答
-      </button>
-      <button class="tab-btn" data-tab="report">
-        <span class="tab-icon">&#128202;</span> 报告生成
-      </button>
-    </nav>
+    <div class="layout-body">
+      <!-- ===== Sidebar ===== -->
+      <nav class="sidebar" id="sidebar">
+        <button class="sidebar-btn active" data-page="dashboard">
+          <svg class="sidebar-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="6" height="6" rx="1"/>
+            <rect x="11" y="3" width="6" height="6" rx="1"/>
+            <rect x="3" y="11" width="6" height="6" rx="1"/>
+            <rect x="11" y="11" width="6" height="6" rx="1"/>
+          </svg>
+          <span class="sidebar-label">总览</span>
+        </button>
+        <button class="sidebar-btn" data-page="documents">
+          <svg class="sidebar-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 2H6a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7l-5-5z"/>
+            <polyline points="11 2 11 7 16 7"/>
+          </svg>
+          <span class="sidebar-label">文档管理</span>
+          <span class="sidebar-badge" id="sidebarDocCount">--</span>
+        </button>
+        <button class="sidebar-btn" data-page="qa">
+          <svg class="sidebar-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 4v8a2 2 0 01-2 2h-5l-4 4v-4H4a2 2 0 01-2-2V4a2 2 0 012-2h12a2 2 0 012 2z"/>
+          </svg>
+          <span class="sidebar-label">智能问答</span>
+        </button>
+        <button class="sidebar-btn" data-page="report">
+          <svg class="sidebar-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2H4a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-2"/>
+            <rect x="8" y="2" width="9" height="8" rx="1"/>
+            <line x1="11" y1="5" x2="14" y2="5"/>
+            <line x1="11" y1="8" x2="14" y2="8"/>
+          </svg>
+          <span class="sidebar-label">报告生成</span>
+        </button>
+        <div class="sidebar-divider"></div>
+        <button class="sidebar-btn" data-page="stats">
+          <svg class="sidebar-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="18" x2="2" y2="18"/>
+            <rect x="3" y="10" width="3" height="8" rx="0.5"/>
+            <rect x="8.5" y="6" width="3" height="12" rx="0.5"/>
+            <rect x="14" y="2" width="3" height="16" rx="0.5"/>
+          </svg>
+          <span class="sidebar-label">使用统计</span>
+        </button>
+      </nav>
 
-    <main class="tab-content">
-      <!-- ======== 文档管理页签 ======== -->
-      <section class="tab-panel active" id="panel-documents">
-        <div class="upload-section">
-          <div class="upload-zone" id="uploadZone">
-            <div class="upload-zone-content">
-              <span class="upload-icon">&#128229;</span>
-              <p>拖拽文件到此处，或点击选择文件</p>
-              <p class="upload-hint">支持 PDF、DOCX、TXT、MD 及图片（JPG/PNG/BMP/WebP），单文件 ≤50MB</p>
-              <input type="file" id="fileInput" multiple accept=".pdf,.docx,.txt,.md,.jpg,.jpeg,.png,.bmp,.webp" hidden>
-              <button class="btn btn-outline" id="browseBtn">浏览文件</button>
-            </div>
+      <main class="main-content">
+
+        <!-- ======== Dashboard ======== -->
+        <section class="page-panel active" id="page-dashboard">
+          <div class="page-header">
+            <h2><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>系统总览</h2>
+            <span class="page-subtitle">知识库运行状态与快速操作</span>
           </div>
-          <div class="upload-progress hidden" id="uploadProgress">
-            <div class="progress-bar">
-              <div class="progress-fill" id="progressFill"></div>
-            </div>
-            <span class="progress-text" id="progressText">上传中...</span>
-          </div>
-        </div>
 
-        <div class="stats-bar" id="statsBar">
-          <div class="stat-item"><strong>文档数：</strong><span id="statsDocs">--</span></div>
-          <div class="stat-item"><strong>文本片段：</strong><span id="statsChunks">--</span></div>
-          <button class="btn btn-sm" id="refreshStatsBtn" title="刷新">&#8635;</button>
-        </div>
-
-        <div class="doc-table-container">
-          <table class="doc-table" id="docTable">
-            <thead>
-              <tr>
-                <th>文件名</th>
-                <th>类型</th>
-                <th>片段数</th>
-                <th>导入时间</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody id="docTableBody">
-              <tr class="empty-row"><td colspan="5">暂无文档，请上传文件</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- ======== 智能问答页签 ======== -->
-      <section class="tab-panel" id="panel-qa">
-        <div class="qa-layout">
-          <aside class="qa-sidebar" id="qaSidebar">
-            <button class="btn btn-primary btn-full" id="newConvBtn">+ 新建对话</button>
-            <div class="conv-list" id="convList"></div>
-          </aside>
-          <div class="qa-main">
-            <div class="chat-area" id="chatArea">
-              <div class="chat-welcome">
-                <span class="welcome-icon">&#129302;</span>
-                <h3>欢迎使用医疗器械 AI 知识库</h3>
-                <p>先在"文档管理"中导入技术文档，然后在此提问</p>
-                <p class="welcome-examples">
-                  试试问：<br>
-                  "注塑工序中飞边问题如何解决？"<br>
-                  "生物相容性评价需要哪些试验项目？"<br>
-                  "CAPA-2026-005 的根本原因是什么？"
-                </p>
+          <div class="dash-cards" id="dashCards">
+            <div class="dash-card">
+              <div class="dash-card-icon" style="background:var(--primary-light);color:var(--primary)">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9l-7-7z"/><polyline points="13 2 13 9 20 9"/></svg>
+              </div>
+              <div class="dash-card-body">
+                <span class="dash-card-value skeleton-text" id="dashDocCount" data-skeleton="--">&nbsp;</span>
+                <span class="dash-card-label">文档总数</span>
               </div>
             </div>
-            <div class="chat-input-area">
-              <textarea id="chatInput" rows="2" placeholder="输入您的问题... (Ctrl+Enter 发送)"></textarea>
-              <button class="btn btn-primary" id="sendBtn">发送</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ======== 报告生成页签 ======== -->
-      <section class="tab-panel" id="panel-report">
-        <div class="report-layout">
-          <div class="report-form">
-            <div class="form-group">
-              <label>报告类型</label>
-              <select id="reportType">
-                <option value="">-- 请选择 --</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>报告标题（可选）</label>
-              <input type="text" id="reportTitle" placeholder="例如：B20260312 批次滴斗歪斜 CAPA 报告">
-            </div>
-            <div class="form-group">
-              <label>关注点（可选）</label>
-              <textarea id="reportFocus" rows="3" placeholder="描述你希望报告重点分析的方向..."></textarea>
-            </div>
-            <button class="btn btn-primary btn-full" id="generateReportBtn">生成报告</button>
-          </div>
-          <div class="report-output hidden" id="reportOutput">
-            <div class="report-output-header">
-              <h3>&#128202; 生成的报告</h3>
-              <div class="report-actions">
-                <button class="btn btn-sm" id="copyReportBtn">&#128203; 复制</button>
-                <button class="btn btn-sm" id="downloadReportBtn">&#128190; 下载 MD</button>
+            <div class="dash-card">
+              <div class="dash-card-icon" style="background:var(--accent-light);color:var(--accent)">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="3" y1="9" x2="21" y2="9"/></svg>
+              </div>
+              <div class="dash-card-body">
+                <span class="dash-card-value skeleton-text" id="dashChunkCount" data-skeleton="--">&nbsp;</span>
+                <span class="dash-card-label">文本片段</span>
               </div>
             </div>
-            <div class="report-body" id="reportBody"></div>
-            <div class="report-sources" id="reportSources"></div>
+            <div class="dash-card">
+              <div class="dash-card-icon" style="background:var(--success-bg);color:var(--success)">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              </div>
+              <div class="dash-card-body">
+                <span class="dash-card-value skeleton-text" id="dashTokenToday" data-skeleton="--">&nbsp;</span>
+                <span class="dash-card-label">今日 Token 消耗</span>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
-    </main>
+
+          <div class="dash-actions" id="dashActions">
+            <button class="dash-action-btn" data-nav="documents">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span class="dash-action-title">上传文档</span>
+              <span class="dash-action-desc">导入 PDF、DOCX、图片等文件</span>
+            </button>
+            <button class="dash-action-btn" data-nav="qa">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              <span class="dash-action-title">智能问答</span>
+              <span class="dash-action-desc">基于知识库的 RAG 检索问答</span>
+            </button>
+            <button class="dash-action-btn" data-nav="report">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              <span class="dash-action-title">生成报告</span>
+              <span class="dash-action-desc">CAPA、验证、技术总结等专业报告</span>
+            </button>
+          </div>
+
+          <div class="dash-recent">
+            <h3 class="dash-section-title">最近对话</h3>
+            <div class="dash-recent-list" id="dashRecentConvs">
+              <div class="skeleton-list">
+                <div class="skeleton-line w-60"></div>
+                <div class="skeleton-line w-80"></div>
+                <div class="skeleton-line w-50"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ======== 文档管理 ======== -->
+        <section class="page-panel" id="page-documents">
+          <div class="page-header">
+            <h2><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9l-7-7z"/><polyline points="13 2 13 9 20 9"/></svg>文档管理</h2>
+            <span class="page-subtitle">上传、检索与管理知识库文档</span>
+          </div>
+
+          <div class="upload-section">
+            <div class="upload-zone" id="uploadZone">
+              <div class="upload-zone-content">
+                <svg class="upload-icon-svg" viewBox="0 0 48 48" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                  <path d="M28 8H14a4 4 0 00-4 4v24a4 4 0 004 4h20a4 4 0 004-4V20l-10-12z"/>
+                  <polyline points="28 8 28 20 38 20"/>
+                  <line x1="24" y1="28" x2="16" y2="28"/>
+                  <line x1="24" y1="33" x2="16" y2="33"/>
+                </svg>
+                <p>拖拽文件到此处，或点击选择文件</p>
+                <p class="upload-hint">支持 PDF、DOCX、TXT、MD 及图片（JPG/PNG/BMP/WebP），单文件 ≤50MB</p>
+                <input type="file" id="fileInput" multiple accept=".pdf,.docx,.txt,.md,.svg,.jpg,.jpeg,.png,.bmp,.webp" hidden>
+                <button class="btn btn-outline" id="browseBtn">浏览文件</button>
+              </div>
+            </div>
+            <div class="upload-progress hidden" id="uploadProgress">
+              <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+              </div>
+              <span class="progress-text" id="progressText">上传中...</span>
+              <div class="progress-file-list" id="progressFileList"></div>
+            </div>
+          </div>
+
+          <div class="doc-toolbar">
+            <div class="doc-search-bar" id="docSearchBar">
+              <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="5.5"/><line x1="12.5" y1="12.5" x2="17" y2="17"/></svg>
+              <input type="text" class="doc-search-input" id="docSearchInput" placeholder="搜索文件名或类型...">
+              <button class="doc-search-clear hidden" id="docSearchClear">
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>
+              </button>
+            </div>
+            <div class="stats-bar" id="statsBar">
+              <div class="stat-item"><strong>共</strong> <span id="statsDocs">--</span> <strong>份文档</strong></div>
+              <div class="stat-item"><strong>·</strong> <span id="statsChunks">--</span> <strong>个片段</strong></div>
+              <div class="stat-spacer"></div>
+              <button class="btn btn-sm btn-danger hidden" id="deleteSelectedBtn">删除选中</button>
+              <button class="btn btn-sm" id="refreshStatsBtn" title="刷新">
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 1 4 1"/><path d="M1 8a7 7 0 0112.1-4.9"/><polyline points="15 12 15 15 12 15"/><path d="M15 8a7 7 0 01-12.1 4.9"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="doc-table-container">
+            <table class="doc-table" id="docTable">
+              <thead>
+                <tr>
+                  <th class="col-cb"><input type="checkbox" id="selectAllDocs" title="全选"></th>
+                  <th class="col-name sortable" data-sort="name">文件名 <span class="sort-arrow"></span></th>
+                  <th class="col-type sortable" data-sort="type">类型 <span class="sort-arrow"></span></th>
+                  <th class="col-chunks">片段数</th>
+                  <th class="col-date sortable" data-sort="date">导入时间 <span class="sort-arrow"></span></th>
+                  <th class="col-action">操作</th>
+                </tr>
+              </thead>
+              <tbody id="docTableBody">
+                <tr class="skeleton-row"><td></td><td><div class="skeleton-line w-70"></div></td><td><div class="skeleton-line w-40"></div></td><td><div class="skeleton-line w-20"></div></td><td><div class="skeleton-line w-60"></div></td><td></td></tr>
+                <tr class="skeleton-row"><td></td><td><div class="skeleton-line w-50"></div></td><td><div class="skeleton-line w-30"></div></td><td><div class="skeleton-line w-20"></div></td><td><div class="skeleton-line w-50"></div></td><td></td></tr>
+                <tr class="skeleton-row"><td></td><td><div class="skeleton-line w-60"></div></td><td><div class="skeleton-line w-50"></div></td><td><div class="skeleton-line w-20"></div></td><td><div class="skeleton-line w-60"></div></td><td></td></tr>
+              </tbody>
+            </table>
+            <div class="pagination-bar hidden" id="paginationBar"></div>
+          </div>
+        </section>
+
+        <!-- ======== 智能问答 ======== -->
+        <section class="page-panel" id="page-qa">
+          <div class="qa-layout">
+            <aside class="qa-sidebar" id="qaSidebar">
+              <div class="qa-sidebar-header">
+                <div class="conv-search-wrap">
+                  <svg viewBox="0 0 18 18" width="14" height="14" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round"><circle cx="8" cy="8" r="5"/><line x1="11.5" y1="11.5" x2="15.5" y2="15.5"/></svg>
+                  <input type="text" class="conv-search-input" id="convSearchInput" placeholder="搜索对话...">
+                </div>
+                <button class="btn btn-primary btn-full" id="newConvBtn">+ 新建对话</button>
+              </div>
+              <div class="conv-list" id="convList">
+                <div class="skeleton-list" style="padding:12px">
+                  <div class="skeleton-line w-80"></div>
+                  <div class="skeleton-line w-60"></div>
+                  <div class="skeleton-line w-70"></div>
+                </div>
+              </div>
+            </aside>
+            <div class="qa-main">
+              <div class="chat-area" id="chatArea">
+                <div class="chat-welcome">
+                  <svg viewBox="0 0 56 56" width="56" height="56" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="28" cy="28" r="24" stroke-dasharray="4 3"/>
+                    <circle cx="20" cy="24" r="2" fill="var(--text-muted)" stroke="none"/>
+                    <circle cx="36" cy="24" r="2" fill="var(--text-muted)" stroke="none"/>
+                    <path d="M20 34a11 11 0 0016 0"/>
+                  </svg>
+                  <h3>欢迎使用医疗器械 AI 知识库</h3>
+                  <p>先在"文档管理"中导入技术文档，然后在此提问</p>
+                  <p class="welcome-examples">
+                    试试问：<br>
+                    "注塑工序中飞边问题如何解决？"<br>
+                    "生物相容性评价需要哪些试验项目？"<br>
+                    "CAPA-2026-005 的根本原因是什么？"
+                  </p>
+                </div>
+              </div>
+              <div class="chat-input-area">
+                <textarea id="chatInput" rows="2" placeholder="输入您的问题... (Ctrl+Enter 发送)"></textarea>
+                <div class="chat-input-btns">
+                  <button class="btn btn-sm btn-outline hidden" id="qaToReportBtn" title="将当前对话转为报告">
+                    <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2H5a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V4l-2-2z"/><polyline points="9 2 9 5 13 5"/></svg>
+                    生成报告
+                  </button>
+                  <button class="btn btn-primary" id="sendBtn">发送</button>
+                  <button class="btn btn-danger hidden" id="stopBtn">停止</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ======== 报告生成 ======== -->
+        <section class="page-panel" id="page-report">
+          <div class="page-header">
+            <h2><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>报告生成</h2>
+            <span class="page-subtitle">基于知识库文档自动生成专业报告</span>
+          </div>
+
+          <div class="report-layout">
+            <div class="report-form" id="reportForm">
+              <div class="report-form-header">
+                <h3>报告配置</h3>
+                <button class="report-form-toggle" id="reportFormToggle" title="折叠">
+                  <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="3" x2="8" y2="13"/><line x1="3" y1="8" x2="13" y2="8"/></svg>
+                </button>
+              </div>
+              <div class="report-form-body">
+                <div class="form-group">
+                  <label>报告类型</label>
+                  <select id="reportType">
+                    <option value="">-- 请选择 --</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>报告标题（可选）</label>
+                  <input type="text" id="reportTitle" placeholder="例如：B20260312 批次滴斗歪斜 CAPA 报告">
+                </div>
+                <div class="form-group">
+                  <label>关注点（可选）</label>
+                  <textarea id="reportFocus" rows="3" placeholder="描述你希望报告重点分析的方向..."></textarea>
+                </div>
+                <div class="report-btns">
+                  <button class="btn btn-primary btn-full" id="generateReportBtn">生成报告</button>
+                  <button class="btn btn-danger btn-full hidden" id="stopReportBtn">停止生成</button>
+                </div>
+              </div>
+            </div>
+            <div class="report-output hidden" id="reportOutput">
+              <div class="report-output-header">
+                <h3><svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2H6a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7l-5-5z"/><polyline points="13 2 13 7 18 7"/></svg>生成的报告</h3>
+                <div class="report-actions">
+                  <button class="btn btn-sm" id="copyReportBtn">
+                    <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="5" width="9" height="9" rx="1"/><path d="M11 5V3a1 1 0 00-1-1H3a1 1 0 00-1 1v8a1 1 0 001 1h2"/></svg> 复制
+                  </button>
+                  <button class="btn btn-sm" id="downloadReportBtn">
+                    <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 10v3a1 1 0 01-1 1H3a1 1 0 01-1-1v-3"/><polyline points="5 7 8 10 11 7"/><line x1="8" y1="10" x2="8" y2="2"/></svg> 下载 MD
+                  </button>
+                </div>
+              </div>
+              <div class="report-body" id="reportBody"></div>
+              <div class="report-sources" id="reportSources"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ======== 使用统计 ======== -->
+        <section class="page-panel" id="page-stats">
+          <div class="page-header">
+            <h2><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="22" y1="22" x2="2" y2="22"/><rect x="4" y="12" width="4" height="10" rx="0.5"/><rect x="11" y="7" width="4" height="15" rx="0.5"/><rect x="18" y="3" width="4" height="19" rx="0.5"/></svg>使用统计</h2>
+            <span class="page-subtitle">Token 消耗与系统运行数据</span>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stats-card stats-token-overview">
+              <h3>Token 消耗概览</h3>
+              <div class="token-meters">
+                <div class="token-meter">
+                  <div class="token-meter-header">
+                    <span>累计输入</span>
+                    <span class="token-meter-val" id="statsInputTokens">--</span>
+                  </div>
+                  <div class="token-meter-bar">
+                    <div class="token-meter-fill input-fill" id="statsInputFill"></div>
+                  </div>
+                </div>
+                <div class="token-meter">
+                  <div class="token-meter-header">
+                    <span>累计输出</span>
+                    <span class="token-meter-val" id="statsOutputTokens">--</span>
+                  </div>
+                  <div class="token-meter-bar">
+                    <div class="token-meter-fill output-fill" id="statsOutputFill"></div>
+                  </div>
+                </div>
+                <div class="token-total-row">
+                  <span>合计</span>
+                  <span class="token-total-val" id="statsTotalTokens">--</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="stats-card">
+              <h3>每日 Token 消耗</h3>
+              <div class="daily-table-container">
+                <table class="daily-table" id="dailyTable">
+                  <thead>
+                    <tr><th>日期</th><th>输入</th><th>输出</th><th>合计</th></tr>
+                  </thead>
+                  <tbody id="dailyTableBody">
+                    <tr class="empty-row"><td colspan="4">暂无数据</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="stats-card">
+              <h3>系统信息</h3>
+              <div class="sys-info-list" id="sysInfoList">
+                <div class="sys-info-row"><span class="sys-info-label">向量模型</span><span class="sys-info-val">bge-small-zh-v1.5 / bge-small-en-v1.5</span></div>
+                <div class="sys-info-row"><span class="sys-info-label">大语言模型</span><span class="sys-info-val">claude-sonnet-4-6</span></div>
+                <div class="sys-info-row"><span class="sys-info-label">向量维度</span><span class="sys-info-val">512</span></div>
+                <div class="sys-info-row"><span class="sys-info-label">数据存储</span><span class="sys-info-val">LanceDB</span></div>
+                <div class="sys-info-row"><span class="sys-info-label">运行状态</span><span class="sys-info-val" style="color:var(--success)" id="sysStatus">运行中</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
   </div>
 
   <div class="toast-container" id="toastContainer"></div>

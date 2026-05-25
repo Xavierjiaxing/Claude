@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { RagPipeline } from '../../rag/ragPipeline';
+import { getTokenStats } from '../tokenTracker';
 
 export function createStatsRouter(pipeline: RagPipeline): Router {
   const router = Router();
@@ -12,6 +13,10 @@ export function createStatsRouter(pipeline: RagPipeline): Router {
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
     }
+  });
+
+  router.get('/tokens', (_req, res) => {
+    res.json(getTokenStats());
   });
 
   return router;

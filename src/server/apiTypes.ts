@@ -7,6 +7,7 @@ export interface AskRequest {
 export interface AskResponse {
   answer: string;
   sources: string[];
+  chunks?: { text: string; sourceFile: string; score: number }[];
   conversationId: string;
 }
 
@@ -27,6 +28,7 @@ export interface ReportRequest {
   type: ReportType;
   title?: string;
   focus?: string;
+  sourceFiles?: string[];
 }
 
 export interface ReportResponse {
@@ -47,9 +49,10 @@ export interface Message {
   content: string;
   timestamp: string;
   sources?: string[];
+  chunks?: { text: string; sourceFile: string; score: number }[];
 }
 
-export type ReportType = 'capa' | 'process-validation' | 'quality-incident' | 'technical-summary' | 'general';
+export type ReportType = 'capa' | 'process-validation' | 'quality-incident' | 'technical-summary' | 'sop-version-compare' | 'general';
 
 export interface ReportTemplate {
   name: string;
