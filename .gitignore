@@ -4,3 +4,6 @@ dist/
 .env.local
 .DS_Store
 uploads/
+data/
+frontend/dist/
+frontend/node_modules/
