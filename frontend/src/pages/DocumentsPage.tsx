@@ -52,6 +52,15 @@ export default function DocumentsPage() {
     setPage(1);
   };
 
+  // Sync selected files to sessionStorage for ReportPage to use
+  useEffect(() => {
+    if (selectedFiles.size > 0) {
+      sessionStorage.setItem('selected_files', JSON.stringify([...selectedFiles]));
+    } else {
+      sessionStorage.removeItem('selected_files');
+    }
+  }, [selectedFiles]);
+
   const handleSelectToggle = (filePath: string, checked: boolean) => {
     setSelectedFiles(prev => { const next = new Set(prev); checked ? next.add(filePath) : next.delete(filePath); return next; });
   };

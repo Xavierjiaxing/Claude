@@ -21,11 +21,18 @@ export default function ReportPage() {
     const controller = new AbortController();
     abortRef.current = controller;
 
+    // Collect selected document files from Documents page
+    const sourceFiles: string[] = [];
+    try {
+      const stored = sessionStorage.getItem('selected_files');
+      if (stored) sourceFiles.push(...JSON.parse(stored));
+    } catch { /* ignore */ }
+
     let rawText = '';
     let firstChunk = true;
     api.stream(
       '/api/report',
-      { type, title, focus, stream: true },
+      { type, title, focus, stream: true, sourceFiles },
       (text) => {
         rawText += text;
         if (firstChunk) {
